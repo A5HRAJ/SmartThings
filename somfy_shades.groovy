@@ -31,22 +31,55 @@ metadata {
     }
 }
 
+def parse(String description) {
+    description
+    def result = null
+    def cmd = zwave.parse(description, [0x20: 1, 0x26: 1, 0x70: 1])
+    if (cmd) {
+        result = zwaveEvent(cmd)
+        log.debug "Parsed ${cmd} to ${result.inspect()}"
+    } else {
+        log.debug "Non-parsed event: ${description}"
+    }
+    return result
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd)
+{
+    def result
+    if (cmd.value == 0) {
+        result = createEvent(name: "switch", value: "off")
+    } else {
+        result = createEvent(name: "switch", value: "on")
+    }
+    return result
+}
+
 def on() {
-    zwave.basicV1.basicSet(value: 0xFF).format()
+    delayBetween([
+        zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
+        sendEvent(name: "switch", value: on)
+    ], 5000)
 }
 
 def off() {
-    zwave.basicV1.basicSet(value: 0x00).format()
+    delayBetween([
+        zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
+        sendEvent(name: "switch", value: off)
+    ], 5000)
 }
 
 def setLevel() {
-    zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format()
+    delayBetween([
+        zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
+        sendEvent(name: "switch", value: on)
+    ], 5000)
 }
 
 def refresh() {
-    // zwave.switchBinaryV1.switchBinaryGet().format()
+    zwave.switchMultilevelV1.switchMultilevelGet().format()
 }
 
 def poll() {
-    // zwave.switchBinaryV1.switchBinaryGet().format()
+    // zwave.switchMultilevelV1.switchMultilevelGet().format()
 }
