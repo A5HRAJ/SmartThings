@@ -48,100 +48,31 @@ metadata {
 }
 
 def parse(String description) {
-    def item1 = [
-        canBeCurrentState: false,
-        linkText: getLinkText(device),
-        isStateChange: false,
-        displayed: false,
-        descriptionText: description,
-        value:  description
-    ]
-    def result
+    description
+    def result = null
     def cmd = zwave.parse(description, [0x20: 1, 0x26: 1, 0x70: 1])
     if (cmd) {
-        result = createEvent(cmd, item1)
+        result = zwaveEvent(cmd)
+        log.debug "Parsed ${cmd} to ${result.inspect()}"
+    } else {
+        log.debug "Non-parsed event: ${description}"
     }
-    else {
-        item1.displayed = displayed(description, item1.isStateChange)
-        result = [item1]
+    return result
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd)
+{
+    def result
+    if (cmd.value == 0) {
+        result = createEvent(name: "switch", value: "off")
+    } else {
+        result = createEvent(name: "switch", value: "on")
     }
-    log.debug "Parse returned ${result?.descriptionText}"
-    result
-}
-
-def createEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd, Map item1) {
-    def result = doCreateEvent(cmd, item1)
-    for (int i = 0; i < result.size(); i++) {
-        result[i].type = "physical"
-    }
-    result
-}
-
-def createEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd, Map item1) {
-    def result = doCreateEvent(cmd, item1)
-    for (int i = 0; i < result.size(); i++) {
-        result[i].type = "physical"
-    }
-    result
-}
-
-def createEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelStartLevelChange cmd, Map item1) {
-    []
-}
-
-def createEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelStopLevelChange cmd, Map item1) {
-    [response(zwave.basicV1.basicGet())]
-}
-
-def createEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelSet cmd, Map item1) {
-    def result = doCreateEvent(cmd, item1)
-    for (int i = 0; i < result.size(); i++) {
-        result[i].type = "physical"
-    }
-    result
-}
-
-def createEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd, Map item1) {
-    def result = doCreateEvent(cmd, item1)
-    result[0].descriptionText = "${item1.linkText} is ${item1.value}"
-    result[0].handlerName = cmd.value ? "statusOn" : "statusOff"
-    for (int i = 0; i < result.size(); i++) {
-        result[i].type = "digital"
-    }
-    result
-}
-
-def doCreateEvent(physicalgraph.zwave.Command cmd, Map item1) {
-    def result = [item1]
-
-    item1.name = "switch"
-    item1.value = cmd.value ? "on" : "off"
-    item1.handlerName = item1.value
-    item1.descriptionText = "${item1.linkText} was turned ${item1.value}"
-    item1.canBeCurrentState = true
-    item1.isStateChange = isStateChange(device, item1.name, item1.value)
-    item1.displayed = item1.isStateChange
-
-    if (cmd.value >= 5) {
-        def item2 = new LinkedHashMap(item1)
-        item2.name = "level"
-        item2.value = cmd.value as String
-        item2.unit = "%"
-        item2.descriptionText = "${item1.linkText} dimmed ${item2.value} %"
-        item2.canBeCurrentState = true
-        item2.isStateChange = isStateChange(device, item2.name, item2.value)
-        item2.displayed = false
-        result << item2
-    }
-    result
-}
-def createEvent(physicalgraph.zwave.Command cmd,  Map map) {
-    // Handles any Z-Wave commands we aren't interested in
-    log.debug "UNHANDLED COMMAND $cmd"
+    return result
 }
 
 def on() {
-    level = 99
+	level = 100
     delayBetween([
         zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
         sendEvent(name: "switch", value: on)
