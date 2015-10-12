@@ -26,11 +26,9 @@ metadata {
 
     tiles {
         standardTile("switch", "device.switch", width: 2, height: 2, canChangeIcon: true) {
-            state("off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#79b821", nextState:"opening")
-            state("on", label:'open', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffa81e", nextState:"closing")
-            state("opening", label:'${name}', icon:"st.doors.garage.garage-opening", backgroundColor:"#ffe71e")
-            state("closing", label:'${name}', icon:"st.doors.garage.garage-closing", backgroundColor:"#ffe71e")
-}
+            state "on", label:'open', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f"
+            state "off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#194775"
+        }
         standardTile("on", "device.switch", inactiveLabel: false, decoration: "flat") {
             state "on", label:'up', action:"switch.on", icon:"st.doors.garage.garage-opening"
         }
@@ -38,7 +36,7 @@ metadata {
             state "off", label:'down', action:"switch.off", icon:"st.doors.garage.garage-closing"
         }
         standardTile("stop", "device.level", inactiveLabel: false, decoration: "flat") {
-            state "default", label:'stop', action:"switch level.setLevel", icon:"st.Transportation.transportation13"
+            state "default", label:'stop/my', action:"switch level.setLevel", icon:"st.Transportation.transportation13"
         }
         controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 3, inactiveLabel: false) {
             state "level", action:"switch level.setLevel"
