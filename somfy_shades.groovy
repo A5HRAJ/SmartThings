@@ -53,7 +53,7 @@ def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelR
 }
 
 def on() {
-	level = 100
+	level = 99
     delayBetween([
         zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
         sendEvent(name: "switch", value: on)
