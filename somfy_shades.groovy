@@ -1,7 +1,5 @@
 metadata {
-    definition (name: "Somfy Z-Wave Shades", namespace: "NOTashwin", author: "Ashwin Rajani") {
-        capability "Polling"
-        capability "Refresh"
+    definition (name: "Somfy Z-Wave Shades", namespace: "ashraj", author: "Ash Raj") {
         capability "Switch"
         capability "Switch Level"
         
@@ -20,14 +18,14 @@ metadata {
             state "off", label:'down', action:"switch.off", icon:"st.doors.garage.garage-closing"
         }
         standardTile("stop", "device.level", inactiveLabel: false, decoration: "flat") {
-            state "default", label:'stop', action:"switch level.setLevel", icon:"st.Transportation.transportation13"
+            state "default", label:'stop/my', action:"switch level.setLevel", icon:"st.Transportation.transportation13"
         }
-        standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat") {
-            state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
+        controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 3, inactiveLabel: false) {
+            state "level", action:"switch level.setLevel"
         }
 
         main(["switch"])
-        details(["switch", "on", "off", "stop", "refresh"])
+        details(["switch", "on", "off", "stop"])
     }
 }
 
@@ -44,8 +42,7 @@ def parse(String description) {
     return result
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd)
-{
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd) {
     def result
     if (cmd.value == 0) {
         result = createEvent(name: "switch", value: "off")
@@ -56,6 +53,7 @@ def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelR
 }
 
 def on() {
+	level = 100
     delayBetween([
         zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
         sendEvent(name: "switch", value: on)
@@ -76,10 +74,22 @@ def setLevel() {
     ], 5000)
 }
 
-def refresh() {
-    zwave.switchMultilevelV1.switchMultilevelGet().format()
+def setLevel(level) {
+    if (level >= 75) {
+        zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format()
+    } else if (level <= 25) {
+        zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format()
+    } else {
+        zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format()
+    }
 }
 
-def poll() {
-    // zwave.switchMultilevelV1.switchMultilevelGet().format()
+def setLevel(level, duration) {
+    if (level >= 75) {
+        zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format()
+    } else if (level <= 25) {
+        zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format()
+    } else {
+        zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format()
+    }
 }
