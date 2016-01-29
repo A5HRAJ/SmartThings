@@ -144,7 +144,6 @@ def setLevel() {
 
 def setLevel(level) {
     log.debug "setLevel(level)  {$level}"
-    int newlevel = level
 
     if (level > null) {
 
@@ -172,9 +171,10 @@ def setLevel(level) {
 		zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
 		sendEvent(name: "switch", value: "default")
 	    ], 5000)
+	    newlevel=50
 
 	}
-	if (newlevel != level) sendEvent(name: "level", value: newlevel)
+	sendEvent(name: "level", value: newlevel)
     }
 }
 
