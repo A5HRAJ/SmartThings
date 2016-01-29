@@ -147,31 +147,32 @@ def setLevel() {
 def setLevel(level) {
     log.debug "setLevel(level)  {$level}"
 
-    if (level == null) return
+    if (level > null) {
 
-    sendEvent(name: "level", value: level)
+        sendEvent(name: "level", value: level)
 
-    if (level >= 75) {
+        if (level >= 75) {
 
-	delayBetween([
-	    zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
-	    sendEvent(name: "switch", value: "on")
-	], 5000)
+            delayBetween([
+                zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
+                sendEvent(name: "switch", value: "on")
+            ], 5000)
 
-    } else if (level <= 25) {
+        } else if (level <= 25) {
 
-	delayBetween([
-    	zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
-    	sendEvent(name: "switch", value: "off")
-	], 5000)
+            delayBetween([
+                zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
+                sendEvent(name: "switch", value: "off")
+            ], 5000)
 
-    } else {
+        } else {
 
-	delayBetween([
-	    zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
-	    sendEvent(name: "switch", value: "default")
-	], 5000)
+            delayBetween([
+                zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
+                sendEvent(name: "switch", value: "default")
+            ], 5000)
 
+        }
     }
 }
 
