@@ -51,13 +51,13 @@
                  }
 	}
 
-
+/*
         standardTile("switchmain", "device.switch", width: 2, height: 2) {
             state "on", label:'open', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f"
             state "off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#194775"
             state "default", label:'stop/my', action:"switch level.setLevel", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f"
         }
-
+*/
         standardTile("on", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
             state("on", label:'up', action:"switch.on", icon:"st.doors.garage.garage-opening")
         }
@@ -71,7 +71,7 @@
             state("level", action:"switch level.setLevel")
         }
 
-        main(["switchmain"])
+        main(["switch"])
         details(["switch", "on", "off", "stop"])
     }
 }
