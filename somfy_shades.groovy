@@ -128,13 +128,13 @@ def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelR
 }
 
 def on() {
-    level = 100
+    int level = 100
     log.debug "on()"
     setLevel(level) 
 }
 
 def off() {
-    level = 0
+    int level = 0
     log.debug "off()"
     setLevel(level) 
 }
