@@ -150,31 +150,21 @@ def setLevel(level) {
 	sendEvent(name: "level", value: level)
 
 	if (level >= 75) {
-
 	    delayBetween([
 		zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
 		sendEvent(name: "switch", value: "on")
 	    ], 5000)
-	    newlevel = 100
-
 	} else if (level <= 25) {
-
 	    delayBetween([
     		zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
     		sendEvent(name: "switch", value: "off")
 	    ], 5000)
-	    newlevel = 0
-
 	} else {
-
 	    delayBetween([
 		zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
 		sendEvent(name: "switch", value: "default")
 	    ], 5000)
-	    newlevel=50
-
 	}
-	sendEvent(name: "level", value: newlevel)
     }
 }
 
