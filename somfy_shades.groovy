@@ -37,43 +37,41 @@
 
 
     tiles(scale: 2) {
-	multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
+	multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4){
 		tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
-		    attributeState "on", label:'open', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f"
-		    attributeState "off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#194775"
-		    attributeState "default", label:'stop/my', action:"switch level.setLevel", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f"
+		    attributeState("on", label:'open', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f")
+		    attributeState("off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#194775")
+		    attributeState("default", label:'stop/my', action:"switch level.setLevel", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f")
 		}
 		tileAttribute ("device.level", key: "SLIDER_CONTROL") {
-				attributeState "level", action:"switch level.setLevel"
+				attributeState("level", action:"switch level.setLevel")
 		}
 		tileAttribute ("device.speedLevel", key: "VALUE_CONTROL"){
-                   attributeState "level", action: "levelOpenClose"
+                   attributeState("level", action: "levelOpenClose")
                  }
 	}
 
 
-
-/*
-        standardTile("switch", "device.switch", width: 2, height: 2, canChangeIcon: true) {
+        standardTile("switchmain", "device.switch", width: 2, height: 2) {
             state "on", label:'open', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f"
             state "off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#194775"
             state "default", label:'stop/my', action:"switch level.setLevel", icon:"st.doors.garage.garage-open", backgroundColor:"#ffdf3f"
         }
-*/
+
         standardTile("on", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state "on", label:'up', action:"switch.on", icon:"st.doors.garage.garage-opening"
+            state("on", label:'up', action:"switch.on", icon:"st.doors.garage.garage-opening")
         }
         standardTile("off", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state "off", label:'down', action:"switch.off", icon:"st.doors.garage.garage-closing"
+            state("off", label:'down', action:"switch.off", icon:"st.doors.garage.garage-closing")
         }
         standardTile("stop", "device.level", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state "default", label:'stop/my', action:"switch level.setLevel", icon:"st.Transportation.transportation13"
+            state("default", label:'stop/my', action:"switch level.setLevel", icon:"st.Transportation.transportation13")
         }
         controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 3, inactiveLabel: false) {
-            state "level", action:"switch level.setLevel"
+            state("level", action:"switch level.setLevel")
         }
 
-        main(["switch"])
+        main(["switchmain"])
         details(["switch", "on", "off", "stop"])
     }
 }
@@ -146,33 +144,37 @@ def setLevel() {
 
 def setLevel(level) {
     log.debug "setLevel(level)  {$level}"
+    int newlevel = level
 
     if (level > null) {
 
-        sendEvent(name: "level", value: level)
+	sendEvent(name: "level", value: level)
 
-        if (level >= 75) {
+	if (level >= 75) {
 
-            delayBetween([
-                zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
-                sendEvent(name: "switch", value: "on")
-            ], 5000)
+	    delayBetween([
+		zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
+		sendEvent(name: "switch", value: "on")
+	    ], 5000)
+	    newlevel = 100
 
-        } else if (level <= 25) {
+	} else if (level <= 25) {
 
-            delayBetween([
-                zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
-                sendEvent(name: "switch", value: "off")
-            ], 5000)
+	    delayBetween([
+    		zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
+    		sendEvent(name: "switch", value: "off")
+	    ], 5000)
+	    newlevel = 0
 
-        } else {
+	} else {
 
-            delayBetween([
-                zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
-                sendEvent(name: "switch", value: "default")
-            ], 5000)
+	    delayBetween([
+		zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
+		sendEvent(name: "switch", value: "default")
+	    ], 5000)
 
-        }
+	}
+	if (newlevel != level) sendEvent(name: "level", value: newlevel)
     }
 }
 
