@@ -1,7 +1,7 @@
 /**
  * 
  * https://community.smartthings.com/t/my-somfy-smartthings-integration/13492
- * Modified ERS 1/28/2016
+ * Modified ERS 2/12/2016
  * Changes:
  *        Shows if shades are in a my/stop state
  *        Multi-tile control
