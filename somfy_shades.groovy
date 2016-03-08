@@ -1,20 +1,45 @@
 /**
  * 
  * https://community.smartthings.com/t/my-somfy-smartthings-integration/13492
- * Modified ERS 2/12/2016
- * Changes:
- *        Shows if shades are in a my/stop state
- *        Multi-tile control
- *        Disable dual setLevel operations
+ * Modified ERS 3/7/2016
+ *
+ * Version 1.0.1
+ *
+ * Version History
+ *
+ * 1.0.1    07 Mar 2016		Add Blinds support by edit device to set to blinds type
+ * 1.0.0    24 Feb 2016		Multi-tile, Window Shade Capability, Device Handler attempts to maintain state
+ *
+ * Notes:
+ *
+ * Somfy ZRTSII does not report accurate status for the device.
+ *
+ * This device handler maintains an internal view of device status based on last command
+ * reissuing a command to the shade (up, down, preset (when stopped)) does not move the shade/blinds if it is already in that position
+ * My/stop command does different actions depending if the shade is idle (go to MY or closed position) or moving (stop)
+ *
+ * Once the device is installed, it defaults to "shade" operation.  If "blinds" operation is desired, for the device go to settings (gear)
+ * and change the device operation to Window Blinds
+ *
+ *	Shade and Blinds operate differently in ZRTSII buttons
+ *	- Shades actions: up button: open (on switch),  down button: close (off switch),       my/stop button: presetPosition (50%)
+ *	- Blinds actions: up button: open (on switch),  down button: tilt open (off switch),   my/stop button: close (50%)
+ *
+ * Window Shade Capability standardizes:  (these should not be changed, except by SmartThings capabilities updates)
+ *	- windowShade: unknown, closed, open, partially open, closing, opening 
+ *	- Commands:  open(), close(), presetPosition()
+ *
  */
   metadata {
-    definition (name: "Somfy Z-Wave Shades Multi tile", namespace: "ash", author: "Ash Raj") {
+    definition (name: "Somfy Z-Wave Shades and Blinds Multi tile", namespace: "E_Sch", author: "Eric, Ash, Others") {
         capability "Switch Level"
         capability "Switch"
         capability "Window Shade"
         //capability "Polling"
         capability "Refresh"
         capability "Actuator"
+
+        attribute "stopStr", "enum", ["preset/stop", "close/stop"]
 
         command "levelOpenClose"
 
@@ -39,14 +64,21 @@
         reply "200163,delay 5000,2602": "command: 2603, payload: 63"
     }
 
+    preferences {
+	input ("shadeType", "enum", options:[
+		"shades": "Window Shades",
+		"blinds": "Window Blinds"],
+		title: "Window Shades or Blinds?", description: "set type (shades or blinds)", defaultValue: "shades",
+                required: false, displayDuringSetup: true )
+	}
 
     tiles(scale: 2) {
         multiAttributeTile(name:"shade", type: "lighting", width: 6, height: 4) {
             tileAttribute("device.windowShade", key: "PRIMARY_CONTROL") {
                 attributeState("unknown", label:'${name}', action:"refresh.refresh", icon:"st.doors.garage.garage-open", backgroundColor:"#ffa81e")
-                attributeState("closed", label:'${name}', action:"open", icon:"st.doors.garage.garage-closed", backgroundColor:"#bbbbdd", nextState: "opening")
-                attributeState("open", label:'${name}', action:"close", icon:"st.doors.garage.garage-open", backgroundColor:"#ffcc33", nextState: "closing")
-                attributeState("partially open", label:'stop/my', action:"presetPosition", icon:"st.doors.garage.garage-open", backgroundColor:"#ffcc33")
+                attributeState("closed",  label:'${name}', action:"open", icon:"st.doors.garage.garage-closed", backgroundColor:"#bbbbdd", nextState: "opening")
+                attributeState("open",    label:'up', action:"close", icon:"st.doors.garage.garage-open", backgroundColor:"#ffcc33", nextState: "closing")
+                attributeState("partially open", label:'preset', action:"presetPosition", icon:"st.Transportation.transportation13", backgroundColor:"#ffcc33")
                 attributeState("closing", label:'${name}', action:"presetPosition", icon:"st.doors.garage.garage-closing", backgroundColor:"#bbbbdd")
                 attributeState("opening", label:'${name}', action:"presetPosition", icon:"st.doors.garage.garage-opening", backgroundColor:"#ffcc33")
             }
@@ -58,20 +90,29 @@
             }
         }
 
-        standardTile("switchmain", "device.switch", width: 2, height: 2) {
-            state "on", label:'open', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffcc33"
-            state "off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#bbbbdd"
-            state "default", label:'stop/my', action:"presetPosition", icon:"st.doors.garage.garage-open", backgroundColor:"#ffcc33"
+        standardTile("switchmain", "device.windowShade") {
+            state("unknown", label:'${name}', action:"refresh.refresh", icon:"st.doors.garage.garage-open", backgroundColor:"#ffa81e")
+            state("closed",  label:'${name}', action:"open", icon:"st.doors.garage.garage-closed", backgroundColor:"#bbbbdd", nextState: "opening")
+            state("open",    label:'up', action:"close", icon:"st.doors.garage.garage-open", backgroundColor:"#ffcc33", nextState: "closing")
+            state("partially open", label:'preset', action:"presetPosition", icon:"st.Transportation.transportation13", backgroundColor:"#ffcc33")
+            state("closing", label:'${name}', action:"presetPosition", icon:"st.doors.garage.garage-closing", backgroundColor:"#bbbbdd")
+            state("opening", label:'${name}', action:"presetPosition", icon:"st.doors.garage.garage-opening", backgroundColor:"#ffcc33")
+
+//            state("on", label:'up', action:"switch.off", icon:"st.doors.garage.garage-open", backgroundColor:"#ffcc33")
+//            state("off", label:'closed', action:"switch.on", icon:"st.doors.garage.garage-closed", backgroundColor:"#bbbbdd")
+//            state("default", label:'preset', action:"presetPosition", icon:"st.Transportation.transportation13", backgroundColor:"#ffcc33")
         }
 
         standardTile("on", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
             state("on", label:'open', action:"switch.on", icon:"st.doors.garage.garage-opening")
         }
-        standardTile("off", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state("off", label:'close', action:"switch.off", icon:"st.doors.garage.garage-closing")
+        standardTile("off", "device.stopStr", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+            state("close/stop", label:'close/stop', action:"switch.off", icon:"st.doors.garage.garage-closing")
+            state("default", label:'close', action:"switch.off", icon:"st.doors.garage.garage-closing")
         }
-        standardTile("stop", "device.level", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state("default", label:'stop/my', action:"switch level.setLevel", icon:"st.Transportation.transportation13")
+        standardTile("preset", "device.stopStr", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+            state("close/stop", label:'slats open', action:"switch level.setLevel", icon:"st.Transportation.transportation13")
+            state("default", label:'preset/stop', action:"switch level.setLevel", icon:"st.Transportation.transportation13")
         }
         controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 3, inactiveLabel: false) {
             state("level", action:"switch level.setLevel")
@@ -88,7 +129,46 @@
 //      }
 
         main(["switchmain"])
-        details(["shade", "on", "off", "stop"])
+        details(["shade", "on", "off", "preset"])
+    }
+}
+
+def configure() {
+    log.trace "configure() called"
+    updated()
+}
+
+def updated() {
+    log.trace "updated() called"
+    def currstat = device.latestValue("switch")
+    def currstat1 = device.latestValue("windowShade")
+
+    log.debug "Shade type: ${settings?.shadeType}"
+    if (settings?.shadeType) {
+        if (settings.shadeType == "shades") {
+            sendEvent(name: "stopStr", value: "preset/stop")
+        } else {
+            sendEvent(name: "stopStr", value: "close/stop")
+        }
+    } else {
+        sendEvent(name: "stopStr", value: "preset/stop")
+    }
+
+    log.debug "switch state: ${currstat}  windowShade state: ${currstat1}"
+    if ( (currstat == null) || (currstat1 == null)) {
+        if (currstat > null) {
+            switch (currstat) {
+                case "on":
+                    sendEvent(name: "windowShade", value: "open")
+                    break
+                case "off":
+                    sendEvent(name: "windowShade", value: "closed")
+                    break
+                case "default":
+                    sendEvent(name: "windowShade", value: "partially open")
+                    break
+            }
+        }
     }
 }
 
@@ -117,37 +197,58 @@ def levelOpenClose(value) {
 
 // Somfy ZRTSII does not report accurate status for the device.
 // This device handler maintains an internal view of device status based on last command
-// reissuing a command to the shade (up, down, my (when stopped)) does not move the shade if it is already in that position
+// reissuing a command to the shade (up, down, preset (my) (when stopped)) does not move the shade if it is already in that position
 // My/stop command does different actions depending if the shade is idle (go to MY position) or moving (stop)
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd)
 {
     def result = []
+    def tempstr = ""
+
     log.trace "Basic report cmd.value:  ${cmd.value}"
+
     if (cmd.value == 0) {
         //result << createEvent(name: "switch", value: "off")
-        log.debug "Reported state is closed; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+
+        tempstr = "closed"
+        if (settings?.shadeType) {
+            if (settings.shadeType == "blinds") {
+                tempstr = "tilted open"
+            }
+        }
     } else if (cmd.value == 0xFF) {
         //result << createEvent(name: "switch", value: "on")
-        log.debug "Reported state is open; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        tempstr = "open"
+
     } else {  // This has never happend
         //result << createEvent(name: "switch", value: "default")
-        log.debug "Reported state is neither open or closed; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        tempstr="neither open or closed"
     }
+    log.debug "Reported state is ${tempstr}; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
     return result
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
     def result = []
+    def tempstr = ""
+
     log.debug "SwitchBinaryReport cmd.value:  ${cmd.value}"
     
     if (cmd.value == 0) {
-        log.debug "Reported state is closed; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        tempstr = "closed"
+        if (settings?.shadeType) {
+            if (settings.shadeType == "blinds") {
+                tempstr = "tilted open"
+            }
+        }
+
     } else if (cmd.value == 0xFF) {
-        log.debug "Reported state is open; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        tempstr = "open"
+
     } else {  // this has never happened
-        log.debug "Reported state is neither open or closed; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        tempstr="neither open or closed"
     }
+    log.debug "Reported state is ${tempstr}; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
     
     //result << createEvent(name:"switch", value: cmd.value ? "on" : "off")
     //result << createEvent(name: "level",value: cmd.value, unit:"%",
@@ -158,20 +259,29 @@ def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cm
 def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd)
 {
     def result = []
+    def tempstr = ""
+
     log.trace "SwitchMultilevelReport cmd.value:  ${cmd.value}"
     
     if (cmd.value == 0) {
         //result << createEvent(name: "switch", value: "off")
-        log.debug "Reported state is closed; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        tempstr = "closed"
+        if (settings?.shadeType) {
+            if (settings.shadeType == "blinds") {
+                tempstr = "tilted open"
+            }
+        }
+
     } else if (cmd.value == 0xFF) {
         //result << createEvent(name: "switch", value: "on")
-        log.debug "Reported state is open; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        tempstr = "open"
     } else {
-       //result << createEvent(name: "switch", value: "default")
-       log.debug "Reported state is neither open or closed; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
+        //result << createEvent(name: "switch", value: "default")
+        tempstr="neither open or closed"
     }
     //result << createEvent(name: "level",value: cmd.value, unit:"%",
       //descriptionText:"${device.displayName} dimmed ${cmd.value==255 ? 100 : cmd.value}%")
+    log.debug "Reported state is ${tempstr}; device is ${device.latestValue('switch')}  ${device.latestValue('level')} "
     return result
 }
 
@@ -188,7 +298,7 @@ def off() {
 }
 
 def setLevel() {
-    log.trace "setLevel() treated as my/stop"
+    log.trace "setLevel() treated as preset position"
     setLevel(50) 
 }
 
@@ -203,7 +313,7 @@ def close() {
 }
 
 def presetPosition() {
-    log.trace "presetPosition() treated as my/stop"
+    log.trace "presetPosition()"
     setLevel()
 }
 
@@ -224,6 +334,7 @@ def refresh() {
 // If you add the Polling capability to your device type, this command
 // will be called approximately every 5 minutes to check the device's state
 // zrtsII does not provide accurate status of shade position
+
 //def poll() {
 //        log.trace "Poll"
 //        zwave.basicV1.basicGet().format()
@@ -244,26 +355,42 @@ def setLevel(level) {
             newlevel = 100
             delayBetween([
                 zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
-                sendEvent(name: "switch", value: "on"),
-                sendEvent(name: "windowShade", value: "open")
-            ], 5000)
+                sendEvent(name: "windowShade", value: "open"),
+                sendEvent(name: "switch", value: "on")
+            ], 45000)
         } else if (level <= 25) {
             sendEvent(name: "windowShade", value: "closing")
             newlevel = 0
-            delayBetween([
-                zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
-                sendEvent(name: "switch", value: "off"),
-                sendEvent(name: "windowShade", value: "closed")
-            ], 5000)
+            if (settings.shadeType == "shades") {
+                delayBetween([
+                    zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
+                    sendEvent(name: "windowShade", value: "closed"),
+                    sendEvent(name: "switch", value: "off")
+                ], 45000)
+            } else {
+                delayBetween([
+                    zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
+                    sendEvent(name: "windowShade", value: "closed"),
+                    sendEvent(name: "switch", value: "off")
+                ], 45000)
+            }
         } else {
-            delayBetween([
-                zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
-                sendEvent(name: "switch", value: "default"),
-                sendEvent(name: "windowShade", value: "partially open")
-            ], 5000)
+            if (settings.shadeType == "shades") {
+                delayBetween([
+                    zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
+                    sendEvent(name: "windowShade", value: "partially open"),
+                    sendEvent(name: "switch", value: "default")
+                ], 45000)
+            } else {
+                delayBetween([
+                    zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
+                    sendEvent(name: "windowShade", value: "partially open"),
+                    sendEvent(name: "switch", value: "default")
+                ], 45000)
+            }
         }
 
-        // this code below causes commands not be sent/received by the Somfy ZRTSII - assume delayBetween is asynchronous...
+        // this code below causes commands not be sent/received by the Somfy ZRTSII - I assume delayBetween is asynchronous...
 
         //log.trace("finished level adjust")
         //if (newlevel != level) { 
