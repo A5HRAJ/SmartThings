@@ -3,10 +3,11 @@
  * https://community.smartthings.com/t/my-somfy-smartthings-integration/13492
  * Modified ERS 4/4/2016
  *
- * Version 1.0.2
+ * Version 1.0.3
  *
  * Version History
  *
+ * 1.0.3    17 Apr 2016		Expanded runIn timer for movement and  completed states
  * 1.0.2    04 Apr 2016		Added runIn timer for movement vs. completed states
  * 1.0.1    07 Mar 2016		Add Blinds support by edit device to set to blinds type
  * 1.0.0    24 Feb 2016		Multi-tile, Window Shade Capability, Device Handler attempts to maintain state
@@ -353,7 +354,7 @@ def setLevel(level) {
 
         if (level >= 75) {
             sendEvent(name: "windowShade", value: "opening")
-            runIn(20, "openShade", [overwrite: true])
+            runIn(25, "openShade", [overwrite: true])
             delayBetween([
                 zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
                 zwave.basicV1.basicGet().format()
@@ -362,7 +363,7 @@ def setLevel(level) {
             ], 4000)
         } else if (level <= 25) {
             sendEvent(name: "windowShade", value: "closing")
-            runIn(20, "closeShade", [overwrite: true])
+            runIn(25, "closeShade", [overwrite: true])
             if (settings.shadeType == "shades") {
                 delayBetween([
                     zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
@@ -379,7 +380,10 @@ def setLevel(level) {
                 ], 4000)
             }
         } else {
-            runIn(20, "partialOpenShade", [overwrite: true])
+            def currstat = device.latestValue("windowShade")
+            if (currstat == "closed") { sendEvent(name: "windowShade", value: "opening") }
+            else { if (currstat == "open") { sendEvent(name: "windowShade", value: "closing") } }
+            runIn(15, "partialOpenShade", [overwrite: true])
             if (settings.shadeType == "shades") {
                 delayBetween([
                     zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
