@@ -1,7 +1,7 @@
 /**
  * 
  * https://community.smartthings.com/t/my-somfy-smartthings-integration/13492
- * Modified ERS 4/4/2016
+ * Modified ERS 4/17/2016
  *
  * Version 1.0.3
  *
