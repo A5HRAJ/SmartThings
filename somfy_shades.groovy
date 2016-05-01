@@ -3,10 +3,11 @@
  * https://community.smartthings.com/t/my-somfy-smartthings-integration/13492
  * Modified ERS 5/1/2016
  *
- * Version 1.0.3
+ * Version 1.0.5
  *
  * Version History
  *
+ * 1.0.5    01 May 2016		bug fixes
  * 1.0.4    01 May 2016		Sync commands for cases where blinds respond to multiple channels (all vs. single)
  * 1.0.3    17 Apr 2016		Expanded runIn timer for movement and  completed states
  * 1.0.2    04 Apr 2016		Added runIn timer for movement vs. completed states
@@ -166,7 +167,7 @@ def updated() {
             if (currstat >= 75) {
                 //sendEvent(name: "windowShade", value: "open")
                 finishOpenShade()
-            } else if (level <= 25) {
+            } else if (currstat <= 25) {
                 //sendEvent(name: "windowShade", value: "closed")
                 finishCloseShade()
             } else {
@@ -368,10 +369,10 @@ def setLevel(level) {
 
     if (level > null) {
 
-        sendEvent(name: "level", value: level)
-
         if (level >= 75) {
             sendEvent(name: "windowShade", value: "opening")
+            sendEvent(name: "level", value: level)
+            sendEvent(name: "switch", value: "on")
             runIn(25, "finishOpenShade", [overwrite: true])
             delayBetween([
                 zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
@@ -381,6 +382,7 @@ def setLevel(level) {
             ], 4000)
         } else if (level <= 25) {
             sendEvent(name: "windowShade", value: "closing")
+            sendEvent(name: "switch", value: "off")
             runIn(25, "finishCloseShade", [overwrite: true])
             if (settings.shadeType == "shades") {
                 delayBetween([
@@ -401,6 +403,8 @@ def setLevel(level) {
             def currstat = device.latestValue("windowShade")
             if (currstat == "open") { sendEvent(name: "windowShade", value: "closing") }
             else { sendEvent(name: "windowShade", value: "opening") }
+            sendEvent(name: "level", value: level)
+            sendEvent(name: "switch", value: "on")
             runIn(15, "finishPartialOpenShade", [overwrite: true])
             if (settings.shadeType == "shades") {
                 delayBetween([
@@ -440,7 +444,7 @@ def finishOpenShade() {
 
 def finishCloseShade() {
     sendEvent(name: "windowShade", value: "closed")
-    def newlevel = 0
+    def newlevel = 100
     sendEvent(name: "level", value: newlevel)
     sendEvent(name: "switch", value: "off")
 }
