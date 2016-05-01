@@ -1,12 +1,13 @@
 /**
  * 
  * https://community.smartthings.com/t/my-somfy-smartthings-integration/13492
- * Modified ERS 4/17/2016
+ * Modified ERS 5/1/2016
  *
  * Version 1.0.3
  *
  * Version History
  *
+ * 1.0.4    01 May 2016		Sync commands for cases where blinds respond to multiple channels (all vs. single)
  * 1.0.3    17 Apr 2016		Expanded runIn timer for movement and  completed states
  * 1.0.2    04 Apr 2016		Added runIn timer for movement vs. completed states
  * 1.0.1    07 Mar 2016		Add Blinds support by edit device to set to blinds type
@@ -43,6 +44,9 @@
 
         attribute "stopStr", "enum", ["preset/stop", "close/stop"]
 
+        command "OpenSync"
+        command "CloseSync"
+        command "TiltSync"
         command "levelOpenClose"
 
         fingerprint deviceId: "0x1105", inClusters: "0x2C, 0x72, 0x26, 0x20, 0x25, 0x2B, 0x86"
@@ -142,7 +146,7 @@ def configure() {
 
 def updated() {
     log.trace "updated() called"
-    def currstat = device.latestValue("switch")
+    def currstat = device.latestValue("level")
     def currstat1 = device.latestValue("windowShade")
 
     log.debug "Shade type: ${settings?.shadeType}"
@@ -159,16 +163,15 @@ def updated() {
     log.debug "switch state: ${currstat}  windowShade state: ${currstat1}"
     if ( (currstat == null) || (currstat1 == null)) {
         if (currstat > null) {
-            switch (currstat) {
-                case "on":
-                    sendEvent(name: "windowShade", value: "open")
-                    break
-                case "off":
-                    sendEvent(name: "windowShade", value: "closed")
-                    break
-                case "default":
-                    sendEvent(name: "windowShade", value: "partially open")
-                    break
+            if (currstat >= 75) {
+                //sendEvent(name: "windowShade", value: "open")
+                finishOpenShade()
+            } else if (level <= 25) {
+                //sendEvent(name: "windowShade", value: "closed")
+                finishCloseShade()
+            } else {
+                //sendEvent(name: "windowShade", value: "partially open")
+                finishPartialOpenShade()
             }
         }
     }
@@ -316,7 +319,22 @@ def close() {
 
 def presetPosition() {
     log.trace "presetPosition()"
-    setLevel()
+    setLevel(50)
+}
+
+def OpenSync() {
+    log.trace "OpenSync()"
+    finishOpenShade()
+}
+
+def CloseSync() {
+    log.trace "CloseSync()"
+    finishCloseShade()
+}
+
+def TiltSync() {
+    log.trace "TiltSync()"
+    finishPartialOpenShade()
 }
 
 def refresh() {
@@ -354,7 +372,7 @@ def setLevel(level) {
 
         if (level >= 75) {
             sendEvent(name: "windowShade", value: "opening")
-            runIn(25, "openShade", [overwrite: true])
+            runIn(25, "finishOpenShade", [overwrite: true])
             delayBetween([
                 zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF).format(),
                 zwave.basicV1.basicGet().format()
@@ -363,7 +381,7 @@ def setLevel(level) {
             ], 4000)
         } else if (level <= 25) {
             sendEvent(name: "windowShade", value: "closing")
-            runIn(25, "closeShade", [overwrite: true])
+            runIn(25, "finishCloseShade", [overwrite: true])
             if (settings.shadeType == "shades") {
                 delayBetween([
                     zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00).format(),
@@ -381,9 +399,9 @@ def setLevel(level) {
             }
         } else {
             def currstat = device.latestValue("windowShade")
-            if (currstat == "closed") { sendEvent(name: "windowShade", value: "opening") }
-            else { if (currstat == "open") { sendEvent(name: "windowShade", value: "closing") } }
-            runIn(15, "partialOpenShade", [overwrite: true])
+            if (currstat == "open") { sendEvent(name: "windowShade", value: "closing") }
+            else { sendEvent(name: "windowShade", value: "opening") }
+            runIn(15, "finishPartialOpenShade", [overwrite: true])
             if (settings.shadeType == "shades") {
                 delayBetween([
                     zwave.switchMultilevelV1.switchMultilevelStopLevelChange().format(),
@@ -413,23 +431,25 @@ def setLevel(level) {
     }
 }
 
-def openShade() {
+def finishOpenShade() {
+    sendEvent(name: "windowShade", value: "open")
     def newlevel = 100
     sendEvent(name: "level", value: newlevel)
-    sendEvent(name: "windowShade", value: "open")
     sendEvent(name: "switch", value: "on")
 }
 
-def closeShade() {
+def finishCloseShade() {
+    sendEvent(name: "windowShade", value: "closed")
     def newlevel = 0
     sendEvent(name: "level", value: newlevel)
-    sendEvent(name: "windowShade", value: "closed")
     sendEvent(name: "switch", value: "off")
 }
 
-def partialOpenShade() {
+def finishPartialOpenShade() {
     sendEvent(name: "windowShade", value: "partially open")
-    sendEvent(name: "switch", value: "default")
+    def newlevel = 50
+    sendEvent(name: "level", value: newlevel)
+    sendEvent(name: "switch", value: "on")
 }
 
 // this appears to never be called
